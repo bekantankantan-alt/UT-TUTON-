@@ -1,4 +1,4 @@
-name: Build SOAL UT TUTON APK
+name: Build SOAL UT TUTON V21 APK
 
 on:
   workflow_dispatch:
@@ -17,46 +17,43 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
-            cmdline-tools;latest
 
-      - name: Accept SDK Licenses
-        run: yes | sdkmanager --licenses || true
+      - name: Install Android Packages
+        run: |
+          sdkmanager --install "platform-tools"
+          sdkmanager --install "platforms;android-35"
+          sdkmanager --install "build-tools;35.0.0"
 
       - name: Extract Single ZIP
         run: |
+          mkdir -p project
           unzip -q SOAL_UT_TUTON_SINGLE_ZIP_V21_APK.zip -d project
 
-          test -f project/settings.gradle
-          test -f project/build.gradle
-          test -f project/app/build.gradle
+          find project -name settings.gradle -o -name settings.gradle.kts
 
-      - name: Download PDF.js and Mammoth
+      - name: Download PDF DOCX Libraries
         run: |
           mkdir -p project/app/src/main/assets/vendor
 
-          curl -fL --retry 3 \
-            https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \
-            -o project/app/src/main/assets/vendor/pdf.min.js
+          curl -fL \
+          https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \
+          -o project/app/src/main/assets/vendor/pdf.min.js
 
-          curl -fL --retry 3 \
-            https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \
-            -o project/app/src/main/assets/vendor/mammoth.browser.min.js
+          curl -fL \
+          https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js \
+          -o project/app/src/main/assets/vendor/pdf.worker.min.js
 
-          test -s project/app/src/main/assets/vendor/pdf.min.js
-          test -s project/app/src/main/assets/vendor/mammoth.browser.min.js
+          curl -fL \
+          https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \
+          -o project/app/src/main/assets/vendor/mammoth.browser.min.js
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
