@@ -1,10 +1,14 @@
-name: Build Android APK
+name: Build SOAL UT TUTON V20
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    paths:
+      - 'SOAL_UT_TUTON_SINGLE_ZIP_V20_FIX.zip'
+      - '.github/workflows/build.yml'
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -15,34 +19,40 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          gradle-version: '8.9'
 
-      - name: Download Offline Libraries
+      - name: Extract Single ZIP
         run: |
-          mkdir -p app/src/main/assets/vendor
+          mkdir -p project
+          unzip -o SOAL_UT_TUTON_SINGLE_ZIP_V20_FIX.zip -d project
 
-          curl -fL https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \
-            -o app/src/main/assets/vendor/pdf.min.js
+      - name: Download PDF and DOCX Libraries
+        run: |
+          mkdir -p project/app/src/main/assets/vendor
 
-          curl -fL https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js \
-            -o app/src/main/assets/vendor/pdf.worker.min.js
+          curl -fL --retry 3 \
+          https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \
+          -o project/app/src/main/assets/vendor/pdf.min.js
 
-          curl -fL https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \
-            -o app/src/main/assets/vendor/mammoth.browser.min.js
+          curl -fL --retry 3 \
+          https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \
+          -o project/app/src/main/assets/vendor/mammoth.browser.min.js
 
       - name: Build APK
+        working-directory: project
         run: gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SOAL-UT-TUTON-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: project/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
