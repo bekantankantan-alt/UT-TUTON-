@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Java
@@ -23,28 +23,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Android SDK Packages
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Extract Single ZIP
+      - name: Extract ZIP
         run: |
           unzip -q SOAL_UT_TUTON_SINGLE_ZIP_V21_APK.zip -d project
           find project -name settings.gradle -o -name settings.gradle.kts
 
-      - name: Download Offline Libraries
+      - name: Download PDF and DOCX Libraries
         run: |
           mkdir -p project/app/src/main/assets/vendor
 
           curl -fL https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \
-          -o project/app/src/main/assets/vendor/pdf.min.js
+            -o project/app/src/main/assets/vendor/pdf.min.js
 
           curl -fL https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js \
-          -o project/app/src/main/assets/vendor/pdf.worker.min.js
+            -o project/app/src/main/assets/vendor/pdf.worker.min.js
 
           curl -fL https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \
-          -o project/app/src/main/assets/vendor/mammoth.browser.min.js
+            -o project/app/src/main/assets/vendor/mammoth.browser.min.js
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
