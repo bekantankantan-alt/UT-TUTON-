@@ -8,36 +8,43 @@ on:
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Extract Android project ZIP
-        run: |
-          test -f SOAL_UT_TUTON_ANDROID.zip
-          mkdir -p source
-          unzip -q SOAL_UT_TUTON_ANDROID.zip -d source
-
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Download Offline Libraries
+        run: |
+          mkdir -p app/src/main/assets/vendor
+
+          curl -L https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \
+            -o app/src/main/assets/vendor/pdf.min.js
+
+          curl -L https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js \
+            -o app/src/main/assets/vendor/pdf.worker.min.js
+
+          curl -L https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \
+            -o app/src/main/assets/vendor/mammoth.browser.min.js
+
+      - name: Grant Gradle Permission
+        run: chmod +x gradlew
 
       - name: Build APK
-        working-directory: source
-        run: gradle --no-daemon assembleDebug
+        run: ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SOAL-UT-TUTON-APK
-          path: source/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          path: app/build/outputs/apk/debug/*.apk
