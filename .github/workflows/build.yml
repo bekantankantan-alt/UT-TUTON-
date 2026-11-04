@@ -11,38 +11,69 @@ permissions:
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Extract ZIP
         run: |
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+
+          if [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          else
+            SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)"
+          fi
+
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses || true
+
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Extract Single ZIP
+        run: |
+          test -f SOAL_UT_TUTON_SINGLE_ZIP_V21_APK.zip
+
+          mkdir -p project
           unzip -q SOAL_UT_TUTON_SINGLE_ZIP_V21_APK.zip -d project
-          find project -name settings.gradle -o -name settings.gradle.kts
 
-      - name: Download PDF and DOCX Libraries
+          SETTINGS=$(find project -name settings.gradle -o -name settings.gradle.kts | head -n 1)
+
+          if [ -z "$SETTINGS" ]; then
+            echo "ERROR: settings.gradle tidak ditemukan dalam ZIP"
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$(dirname "$SETTINGS")" >> $GITHUB_ENV
+
+      - name: Download PDF.js and Mammoth
         run: |
-          mkdir -p project/app/src/main/assets/vendor
+          mkdir -p "$PROJECT_DIR/app/src/main/assets/vendor"
 
-          curl -fL https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \
-            -o project/app/src/main/assets/vendor/pdf.min.js
+          curl -fL --retry 3 \
+            https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \
+            -o "$PROJECT_DIR/app/src/main/assets/vendor/pdf.min.js"
 
-          curl -fL https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js \
-            -o project/app/src/main/assets/vendor/pdf.worker.min.js
+          curl -fL --retry 3 \
+            https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js \
+            -o "$PROJECT_DIR/app/src/main/assets/vendor/pdf.worker.min.js"
 
-          curl -fL https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \
-            -o project/app/src/main/assets/vendor/mammoth.browser.min.js
+          curl -fL --retry 3 \
+            https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \
+            -o "$PROJECT_DIR/app/src/main/assets/vendor/mammoth.browser.min.js"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -50,12 +81,13 @@ jobs:
           gradle-version: '8.9'
 
       - name: Build APK
-        working-directory: project
-        run: gradle assembleDebug --no-daemon
+        run: |
+          cd "$PROJECT_DIR"
+          gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SOAL-UT-TUTON-V21-APK
-          path: project/app/build/outputs/apk/debug/*.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
