@@ -1,0 +1,43 @@
+name: Build SOAL UT TUTON APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Android project ZIP
+        run: |
+          test -f SOAL_UT_TUTON_ANDROID.zip
+          mkdir -p source
+          unzip -q SOAL_UT_TUTON_ANDROID.zip -d source
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build APK
+        working-directory: source
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SOAL-UT-TUTON-APK
+          path: source/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
