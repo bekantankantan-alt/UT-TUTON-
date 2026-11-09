@@ -19,47 +19,52 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
+      # IMPORTANT: Do not ask setup-android to install the obsolete "tools" package.
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          packages: platform-tools
 
-      - name: Install SDK Packages
+      - name: Install Required Android SDK Packages
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools"
-          sdkmanager "platforms;android-35"
-          sdkmanager "build-tools;35.0.0"
+          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Extract V25 ZIP
+      - name: Extract V25 Project ZIP
         run: |
           test -f SOAL_UT_TUTON_V25_HTML_DRAFT.zip
-
           mkdir -p project
           unzip -q SOAL_UT_TUTON_V25_HTML_DRAFT.zip -d project
 
-          SETTINGS=$(find project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)
-
-          if [ -z "$SETTINGS" ]; then
-            echo "ERROR: Gradle project tidak ditemukan"
+          SETTINGS_FILE=$(find project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "ERROR: settings.gradle(.kts) tidak ditemukan di dalam ZIP."
+            echo "Pastikan ZIP berisi proyek Android lengkap, bukan hanya file HTML."
             exit 1
           fi
 
-          PROJECT_DIR=$(dirname "$SETTINGS")
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+          if [ ! -f "$PROJECT_DIR/app/build.gradle" ] && [ ! -f "$PROJECT_DIR/app/build.gradle.kts" ]; then
+            echo "ERROR: file Gradle modul app tidak ditemukan di $PROJECT_DIR/app"
+            exit 1
+          fi
+
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
       - name: Download PDF.js and Mammoth
         run: |
           mkdir -p "$PROJECT_DIR/app/src/main/assets/vendor"
 
-          curl -fL --retry 3 https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js -o "$PROJECT_DIR/app/src/main/assets/vendor/pdf.min.js"
+          curl -fL --retry 3 --retry-delay 2             https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js             -o "$PROJECT_DIR/app/src/main/assets/vendor/pdf.min.js"
 
-          curl -fL --retry 3 https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js -o "$PROJECT_DIR/app/src/main/assets/vendor/pdf.worker.min.js"
+          curl -fL --retry 3 --retry-delay 2             https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js             -o "$PROJECT_DIR/app/src/main/assets/vendor/pdf.worker.min.js"
 
-          curl -fL --retry 3 https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js -o "$PROJECT_DIR/app/src/main/assets/vendor/mammoth.browser.min.js"
+          curl -fL --retry 3 --retry-delay 2             https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js             -o "$PROJECT_DIR/app/src/main/assets/vendor/mammoth.browser.min.js"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
