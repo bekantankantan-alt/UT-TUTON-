@@ -1,4 +1,4 @@
-name: Build SOAL UT TUTON V24 APK
+name: Build SOAL UT TUTON V25 APK
 
 on:
   workflow_dispatch:
@@ -29,27 +29,27 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
 
-          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" \
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" \\
             -name sdkmanager -type f | head -n 1)
 
           test -n "$SDKMANAGER"
 
           yes | "$SDKMANAGER" --licenses || true
 
-          "$SDKMANAGER" \
-            "platform-tools" \
-            "platforms;android-35" \
+          "$SDKMANAGER" \\
+            "platform-tools" \\
+            "platforms;android-35" \\
             "build-tools;35.0.0"
 
-      - name: Extract Single ZIP
+      - name: Extract V25 Project ZIP
         run: |
-          test -f SOAL_UT_TUTON_SINGLE_ZIP_V24_APK.zip
+          test -f SOAL_UT_TUTON_V25_HTML_DRAFT.zip
 
           mkdir -p project
-          unzip -q SOAL_UT_TUTON_SINGLE_ZIP_V24_APK.zip -d project
+          unzip -q SOAL_UT_TUTON_V25_HTML_DRAFT.zip -d project
 
-          SETTINGS=$(find project \
-            -name settings.gradle \
+          SETTINGS=$(find project \\
+            -name settings.gradle \\
             -o -name settings.gradle.kts | head -n 1)
 
           if [ -z "$SETTINGS" ]; then
@@ -63,16 +63,16 @@ jobs:
         run: |
           mkdir -p "$PROJECT_DIR/app/src/main/assets/vendor"
 
-          curl -fL --retry 3 \
-            https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \
+          curl -fL --retry 3 \\
+            https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js \\
             -o "$PROJECT_DIR/app/src/main/assets/vendor/pdf.min.js"
 
-          curl -fL --retry 3 \
-            https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js \
+          curl -fL --retry 3 \\
+            https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js \\
             -o "$PROJECT_DIR/app/src/main/assets/vendor/pdf.worker.min.js"
 
-          curl -fL --retry 3 \
-            https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \
+          curl -fL --retry 3 \\
+            https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js \\
             -o "$PROJECT_DIR/app/src/main/assets/vendor/mammoth.browser.min.js"
 
       - name: Setup Gradle
@@ -88,6 +88,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SOAL-UT-TUTON-V24-APK
+          name: SOAL-UT-TUTON-V25-APK
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
